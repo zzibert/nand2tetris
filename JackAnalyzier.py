@@ -22,8 +22,10 @@ def jack_tokenizer(filename):
     name_and_suffix = filename.split(".")
     output = name_and_suffix[0]
     output_file = open(output + ".xml", 'w')
+    tab_counter = 1
 
     input_file = open(filename, 'r')
+    output_file.write("<tokens>\n")
     lines = input_file.readlines()
 
     for line in lines:
@@ -37,7 +39,10 @@ def jack_tokenizer(filename):
 
             for token in tokens:
                 token = tokenTypeMaker(token)
-                output_file.write(token + '\n')
+                tabs = tab_counter * '\t'
+                output_file.write(tabs + token + '\n')
+
+    output_file.write("</tokens>")
 
 def token_maker(line):
     line = line.replace('(', ' ( ')
@@ -87,13 +92,13 @@ def tokenTypeMaker(token):
                       or token == '-'
                       or token == '*'
                       or token == '/'
+                      or token == '='
                       or token == '&'
                       or token == '|'
-                      or token == '<'
-                      or token == '>'
-                      or token == '='
                       or token == '~'):
         return handleSymbol(token)
+    elif (token == '<'or token == '>'):
+        return handleEqual(token)
     elif token.isdecimal():
         return handleIntVal(token)
     elif token[0] == '"':
@@ -107,6 +112,15 @@ def handleKeyword(token):
 
 def handleSymbol(token):
     return "<symbol> " + token + " </symbol>"
+
+def handleEqual(token):
+    symbol = ""
+    if token == "<":
+        symbol = "&lt;"
+    elif token == ">":
+        symbol = "&gt;"
+    
+    return handleSymbol(symbol)
 
 def handleIdentifier(token):
     return "<identifier> " + token + " </identifier>"
