@@ -1,6 +1,10 @@
 import sys
 import os
 
+middle_of_string = False
+
+ignore_line = False
+
 
 # JACK ANALYZER
 def jack_analyzer(filename):
@@ -21,15 +25,18 @@ def jack_analyzer(filename):
 def jack_tokenizer(filename):
     name_and_suffix = filename.split(".")
     output = name_and_suffix[0]
-    output_file = open(output + ".xml", 'w')
+    output_file = open( "test.xml", 'w')
+
     tab_counter = 1
 
     input_file = open(filename, 'r')
     output_file.write("<tokens>\n")
     lines = input_file.readlines()
 
+    global ignore_line
+
     for line in lines:
-        if line.strip() and not line[0:2] == "//":
+        if line.strip() and not line[0:2] == "//" and not line[0:3] == "/**":
             line = line.replace('\n', "")
             line = line.replace('\r', "")
             comment = line.find("//")
@@ -40,25 +47,32 @@ def jack_tokenizer(filename):
             for token in tokens:
                 token = tokenTypeMaker(token)
                 tabs = tab_counter * '\t'
-                output_file.write(tabs + token + '\n')
+                output_file.write(token)
 
-    output_file.write("</tokens>")
+    output_file.write("</tokens>\n")
 
 def token_maker(line):
     line = line.replace('(', ' ( ')
     line = line.replace(')', ' ) ')
     line = line.replace('{', ' { ')
     line = line.replace('}', ' } ')
+    line = line.replace('[', ' [ ')
+    line = line.replace(']', ' ] ')
     line = line.replace(';', ' ; ')
     line = line.replace('+', ' + ')
     line = line.replace('*', ' * ')
     line = line.replace('=', ' = ')
+    line = line.replace('.', ' . ')
+    line = line.replace(',', ' , ')
+    line = line.replace('-', ' - ')
     tokens = line.split(" ")
     while("" in tokens): 
         tokens.remove("")
     return tokens
 
 def tokenTypeMaker(token):
+    global middle_of_string
+
     if (token == "if" or token == "class" 
                      or token == "method"
                      or token == "function"
@@ -95,23 +109,33 @@ def tokenTypeMaker(token):
                       or token == '='
                       or token == '&'
                       or token == '|'
+                      or token == '.'
+                      or token == ','
                       or token == '~'):
         return handleSymbol(token)
     elif (token == '<'or token == '>'):
         return handleEqual(token)
     elif token.isdecimal():
         return handleIntVal(token)
+    elif token[0] == '"' and token[-1] == '"':
+        return handleStringValWhole(token)
     elif token[0] == '"':
+        return handleStringValBeginning(token)
+        middle_of_string = True
+    elif token[-1] == '"':
+        return handleStringValEnd(token)
+        middle_of_string = False
+    elif middle_of_string:
         return handleStringVal(token)
     else:
         return handleIdentifier(token)
 
 
 def handleKeyword(token):
-    return "<keyword> " + token + " </keyword>"
+    return "<keyword> " + token + " </keyword>\n"
 
 def handleSymbol(token):
-    return "<symbol> " + token + " </symbol>"
+    return "<symbol> " + token + " </symbol>\n"
 
 def handleEqual(token):
     symbol = ""
@@ -123,13 +147,22 @@ def handleEqual(token):
     return handleSymbol(symbol)
 
 def handleIdentifier(token):
-    return "<identifier> " + token + " </identifier>"
+    return "<identifier> " + token + " </identifier>\n"
 
 def handleIntVal(token):
-    return "<integerConstant> " + token + " </integerConstant>"
+    return "<integerConstant> " + token + " </integerConstant>\n"
+
+def handleStringValWhole(token):
+    return "<stringConstant> " + token[1:-1] + " </stringConstant>\n"
+
+def handleStringValBeginning(token):
+    return "<stringConstant> " + token[1:] + " "
+
+def handleStringValEnd(token):
+    return token[:-1] + " </stringConstant>\n"
 
 def handleStringVal(token):
-    return "<stringConstant> " + token[1:-1] + " </stringConstant>" 
+    return token + " "
 
             
 
