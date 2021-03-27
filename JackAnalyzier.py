@@ -36,7 +36,10 @@ def jack_tokenizer(filename):
     global ignore_line
 
     for line in lines:
-        if line.strip() and not line[0:2] == "//" and not line[0:3] == "/**":
+        line = line.strip()
+        if line[0:3] == "/**":
+            ignore_line = True
+        if not line[0:2] == "//" and not ignore_line:
             line = line.replace('\n', "")
             line = line.replace('\r', "")
             comment = line.find("//")
@@ -48,6 +51,8 @@ def jack_tokenizer(filename):
                 token = tokenTypeMaker(token)
                 tabs = tab_counter * '\t'
                 output_file.write(token)
+        if line[-2:] == "*/":
+            ignore_line = False
 
     output_file.write("</tokens>\n")
 
@@ -65,6 +70,7 @@ def token_maker(line):
     line = line.replace('.', ' . ')
     line = line.replace(',', ' , ')
     line = line.replace('-', ' - ')
+    line = line.replace('~', ' ~ ')
     tokens = line.split(" ")
     while("" in tokens): 
         tokens.remove("")
@@ -107,24 +113,23 @@ def tokenTypeMaker(token):
                       or token == '*'
                       or token == '/'
                       or token == '='
-                      or token == '&'
                       or token == '|'
                       or token == '.'
                       or token == ','
                       or token == '~'):
         return handleSymbol(token)
-    elif (token == '<'or token == '>'):
+    elif (token == '<'or token == '>' or token == '&'):
         return handleEqual(token)
     elif token.isdecimal():
         return handleIntVal(token)
-    elif token[0] == '"' and token[-1] == '"':
+    elif token[0] == '"' and token[-1] == '"' and not middle_of_string:
         return handleStringValWhole(token)
-    elif token[0] == '"':
-        return handleStringValBeginning(token)
+    elif token[0] == '"' and not middle_of_string:
         middle_of_string = True
-    elif token[-1] == '"':
-        return handleStringValEnd(token)
+        return handleStringValBeginning(token)
+    elif token[0] == '"' and middle_of_string:
         middle_of_string = False
+        return handleStringValEnd(token)
     elif middle_of_string:
         return handleStringVal(token)
     else:
@@ -143,6 +148,8 @@ def handleEqual(token):
         symbol = "&lt;"
     elif token == ">":
         symbol = "&gt;"
+    elif token == "&":
+        symbol = "&amp;"
     
     return handleSymbol(symbol)
 
