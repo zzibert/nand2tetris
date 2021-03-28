@@ -1,5 +1,6 @@
 import sys
 import os
+import gc
 
 middle_of_string = False
 
@@ -14,23 +15,23 @@ def jack_analyzer(filename):
 
 
     # Create an output file called xxx.xml and prepare it for writing
-    # name_and_suffix = filename.split(".")
-    # output = name_and_suffix[0]
-    # output_file = open(output + ".xml", 'w')
+    name_and_suffix = filename.split(".")
+    output = name_and_suffix[0]
+    output_file = open("test.xml", 'w')
 
     # Use the Compilation Engine to compile the input JackTokenizer into the output file
-    # compilation_engine(output_file, tokenizer)
+    compilation_engine(output_file, tokenizer)
 
 # JACK TOKENIZER
 def jack_tokenizer(filename):
-    name_and_suffix = filename.split(".")
-    output = name_and_suffix[0]
-    output_file = open( "test.xml", 'w')
+    # name_and_suffix = filename.split(".")
+    # output = name_and_suffix[0]
+    # output_file = open( "test.xml", 'w')
 
     tab_counter = 1
+    tokenizer = []
 
     input_file = open(filename, 'r')
-    output_file.write("<tokens>\n")
     lines = input_file.readlines()
 
     global ignore_line
@@ -48,13 +49,15 @@ def jack_tokenizer(filename):
             tokens = token_maker(line)
 
             for token in tokens:
-                token = tokenTypeMaker(token)
-                tabs = tab_counter * '\t'
-                output_file.write(token)
+                # token = tokenTypeMaker(token)
+                tabs = tab_counter * "  "
+                # output_file.write(token + '\n')
+                tokenizer.append(token)
+
         if line[-2:] == "*/":
             ignore_line = False
 
-    output_file.write("</tokens>\n")
+    return tokenizer
 
 def token_maker(line):
     line = line.replace('(', ' ( ')
@@ -127,7 +130,7 @@ def tokenTypeMaker(token):
     elif token[0] == '"' and not middle_of_string:
         middle_of_string = True
         return handleStringValBeginning(token)
-    elif token[0] == '"' and middle_of_string:
+    elif token[0] == '"' or token[-1] == '"' and middle_of_string:
         middle_of_string = False
         return handleStringValEnd(token)
     elif middle_of_string:
@@ -171,11 +174,110 @@ def handleStringValEnd(token):
 def handleStringVal(token):
     return token + " "
 
-            
-
-
 # COMPILATION ENGINE
+
+def compilation_engine(output_file, tokenizer):
+    if tokenizer[0] == "class":
+        output_file.write("<class>\n")
+        compileClass(tokenizer, output_file, 1)
+        output_file.write("</class>")
+
+# def parseStatement():
+
+# def parseWhileStatement():
+
+# def parseIfStatement():
+
+def parseStatementSequence(tokens, output_file, tabs):
+    if tokens[0] == "static" or tokens[0] == "field":
+        end_of_class_var_dec = tokens.index(';')
+        output_file.write(tabs * "  " + "<classVarDec>\n")
+        compileClassVarDec(tokens[:end_of_class_var_dec+1], output_file, tabs+1)
+        output_file.write(tabs * "  " + "</classVarDec>\n")
+        parseStatementSequence(tokens[end_of_class_var_dec+1:], output_file, tabs)
+
+    elif tokens[0] == "function" or tokens[0] == "constructor" or tokens[0] == "method":
+        end_of_subroutine_dec = tokens.index(';')
+        output_file.write(tabs * "  " + "<subroutineDec>\n")
+        compileSubroutineDec(tokens[:end_of_subroutine_dec+1], output_file, tabs+1)
+        output_file.write(tabs * "  " + "</subroutineDec>\n")
+        parseStatementSequence(tokens[end_of_subroutine_dec+1:], output_file, tabs)
+
+
+
+# def parseExpression():
+
+def compileClass(tokens, output_file, tabs):
+    output_file.write(tabs * "  " + handleKeyword(tokens[0])) # class keyword
+    output_file.write(tabs * "  " + handleIdentifier(tokens[1])) # class Name
+    output_file.write(tabs * "  " + handleSymbol(tokens[2])) # {
+    parseStatementSequence(tokens[3:-1], output_file, tabs)
+    output_file.write(tabs * "  " + handleSymbol(tokens[-1])) # }
+
+
+def compileClassVarDec(tokens, output_file, tabs):
+    for token in tokens:
+        output_file.write(tabs * "  " + tokenTypeMaker(token))
+
+def compileSubroutineDec(tokens, output_file, tabs):
+    output_file.write(tabs * "  " + handleKeyword(tokens[0])) # static or field keyword
+    output_file.write(tabs * "  " + handleKeyword(tokens[1])) # type
+    output_file.write(tabs * "  " + handleIdentifier(tokens[2])) # subroutine name
+    output_file.write(tabs * "  " + handleSymbol(tokens[3])) # (
+    end_of_subroutine_dec = tokens.index(')')
+    output_file.write(tabs * "  " + "<parameterList>\n")
+    compileParameterList(tokens[4:end_of_subroutine_dec], output_file, tabs)
+    output_file.write(tabs * "  " + "</parameterList>\n")
+    output_file.write(tabs * "  " + handleSymbol(tokens[end_of_subroutine_dec])) # )
+    output_file.write(tabs * "  " + "<subroutineBody>\n")
+    compileSubroutineBody(tokens[1+end_of_subroutine_dec:], output_file, tabs+1)
+    output_file.write(tabs * "  " + "</subroutineBody>\n")
+
+
+
+def compileParameterList(tokens, output_file, tabs):
+  for token in tokens:
+    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+
+def compileSubroutineBody(tokens, output_file, tabs):
+  output_file.write(tabs * "  " + handleSymbol(tokens[0])) # {
+  if tokens[1] == "var":
+    end_of_var_dec = tokens.index(';')
+    output_file.write(tabs * "  " + "<varDec>\n")
+    compileVarDec(tokens[1:end_of_var_dec+1], output_file, tabs)
+    output_file.write(tabs * "  " + "</varDec>\n")
+    # output_file.write(tabs * "  " + handleSymbol(tokens[end_of_var_dec+1])) # }
+
+  else:
+    end_of_statements_dec = tokens.find('}')
+    output_file.write(tabs * "  " + "<statements>\n")
+    compileStatements(tokens[:end_of_statements_dec+1], output_file, tabs)
+    output_file.write(tabs * "  " + "</statements>\n")
+
+def compileVarDec(tokens, output_file, tabs):
+  for token in tokens:
+    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+
+def compileStatements(tokens, output_file, tabs):
+  for token in tokens:
+    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+
+# def compileDo(tokens, output_file):
+
+# def compileLet(tokens, output_file):
+
+# def compileWhile(tokens, output_file):
+
+# def compileReturn(tokens, output_file):
+
+# def compileIf(tokens, output_file):
+
+# def compileExpression(tokens, output_file):
+
+# def compileTerm(tokens, output_file):
+
+# def compileExpressionList(tokens, output_file):
 
 filename = sys.argv[1]
 
-jack_tokenizer(filename)
+jack_analyzer(filename)
