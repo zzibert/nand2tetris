@@ -261,12 +261,40 @@ def compileVarDec(tokens, output_file, tabs):
 
 def compileStatements(tokens, output_file, tabs):
   if tokens[0] == "let":
+    end_of_let_dec = tokens.index(';')
     output_file.write(tabs * "  " + "<letStatement>\n")
-    compileLet()
+    compileLet(tokens[:end_of_let_dec+1], output_file, tabs+1)
+    output_file.write(tabs * "  " + "</letStatement>\n")
+    compileStatements(tokens[end_of_let_dec+1:], output_file, tabs)
 
-# def compileDo(tokens, output_file):
+  elif tokens[0] == "do":
+    end_of_do_dec = tokens.index(';')
+    output_file.write(tabs * "  " + "<doStatement>\n")
+    compileDo(tokens[:end_of_do_dec+1], output_file, tabs+1)
+    output_file.write(tabs * "  " + "</doStatement>\n")
+    compileStatements(tokens[end_of_do_dec+1:], output_file, tabs)
+
+  # elif tokens[0] == "if":
+  #   end_of_if_dec = tokens.index(';')
+  #   output_file.write(tabs * "  " + "<ifStatement>\n")
+  #   compileDo(tokens[:end_of_if_dec+1], output_file, tabs+1)
+  #   output_file.write(tabs * "  " + "</ifStatement>\n")
+  #   compileStatements(tokens[end_of_if_dec+1:], output_file, tabs)
+
+  # elif tokens[0] == "while":
+  #   end_of_if_dec = tokens.index(';')
+  #   output_file.write(tabs * "  " + "<ifStatement>\n")
+  #   compileDo(tokens[:end_of_if_dec+1], output_file, tabs+1)
+  #   output_file.write(tabs * "  " + "</ifStatement>\n")
+  #   compileStatements(tokens[end_of_if_dec+1:], output_file, tabs)
+
+def compileDo(tokens, output_file, tabs):
+  for token in tokens:
+    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 def compileLet(tokens, output_file, tabs):
+  for token in tokens:
+    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 # def compileWhile(tokens, output_file):
 
