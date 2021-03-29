@@ -290,11 +290,11 @@ def compileStatements(tokens, output_file, tabs):
 
 def compileDo(tokens, output_file, tabs):
   for token in tokens:
-    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+    output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 def compileLet(tokens, output_file, tabs):
   for token in tokens:
-    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+    output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 # def compileWhile(tokens, output_file):
 
