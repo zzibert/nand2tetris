@@ -199,9 +199,8 @@ def parseStatementSequence(tokens, output_file, tabs):
     elif tokens[0] == "function" or tokens[0] == "constructor" or tokens[0] == "method":
         end_of_subroutine_dec = tokens.index(';')
         output_file.write(tabs * "  " + "<subroutineDec>\n")
-        compileSubroutineDec(tokens[:end_of_subroutine_dec+1], output_file, tabs+1)
+        compileSubroutineDec(tokens, output_file, tabs+1)
         output_file.write(tabs * "  " + "</subroutineDec>\n")
-        parseStatementSequence(tokens[end_of_subroutine_dec+1:], output_file, tabs)
 
 
 
@@ -240,18 +239,20 @@ def compileParameterList(tokens, output_file, tabs):
     output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 def compileSubroutineBody(tokens, output_file, tabs):
-  output_file.write(tabs * "  " + handleSymbol(tokens[0])) # {
-  if tokens[1] == "var":
+  if tokens[0] == "{":
+    output_file.write(tabs * "  " + handleSymbol(tokens[0])) # {
+    compileSubroutineBody(tokens[1:], output_file, tabs)
+  elif tokens[0] == "var":
     end_of_var_dec = tokens.index(';')
     output_file.write(tabs * "  " + "<varDec>\n")
-    compileVarDec(tokens[1:end_of_var_dec+1], output_file, tabs)
+    compileVarDec(tokens[:end_of_var_dec+1], output_file, tabs)
     output_file.write(tabs * "  " + "</varDec>\n")
-    # output_file.write(tabs * "  " + handleSymbol(tokens[end_of_var_dec+1])) # }
+    compileSubroutineBody(tokens[end_of_var_dec+1:], output_file, tabs)
 
   else:
-    end_of_statements_dec = tokens.find('}')
+    end_of_statements_dec = tokens.index('}')
     output_file.write(tabs * "  " + "<statements>\n")
-    compileStatements(tokens[:end_of_statements_dec+1], output_file, tabs)
+    compileStatements(tokens[:end_of_statements_dec+1], output_file, tabs+1)
     output_file.write(tabs * "  " + "</statements>\n")
 
 def compileVarDec(tokens, output_file, tabs):
@@ -259,12 +260,13 @@ def compileVarDec(tokens, output_file, tabs):
     output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 def compileStatements(tokens, output_file, tabs):
-  for token in tokens:
-    output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
+  if tokens[0] == "let":
+    output_file.write(tabs * "  " + "<letStatement>\n")
+    compileLet()
 
 # def compileDo(tokens, output_file):
 
-# def compileLet(tokens, output_file):
+def compileLet(tokens, output_file, tabs):
 
 # def compileWhile(tokens, output_file):
 
