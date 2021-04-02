@@ -289,12 +289,30 @@ def compileStatements(tokens, output_file, tabs):
   #   compileStatements(tokens[end_of_if_dec+1:], output_file, tabs)
 
 def compileDo(tokens, output_file, tabs):
-  for token in tokens:
+  beginning_of_expression_list = tokens.index('(')
+  end_of_expression_list = tokens.index(')')
+
+  for token in tokens[:(beginning_of_expression_list+1)]:
+    output_file.write((tabs) * "  " + tokenTypeMaker(token))
+
+  output_file.write(tabs * "  " + "<expressionList>\n")
+  compileExpressionList(tokens[(beginning_of_expression_list+1):end_of_expression_list], output_file, tabs+1)
+  output_file.write(tabs * "  " + "</expressionList>\n")
+
+  for token in tokens[end_of_expression_list:]:
     output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 def compileLet(tokens, output_file, tabs):
-  for token in tokens:
-    output_file.write((tabs) * "  " + tokenTypeMaker(token))
+  output_file.write(tabs * "  " + handleKeyword(tokens[0])) # let keyword
+  output_file.write(tabs * "  " + handleIdentifier(tokens[1])) # varName
+  output_file.write(tabs * "  " + handleSymbol(tokens[2])) # =
+  end_of_let_dec = tokens.index(';')
+  output_file.write(tabs * "  " + "<expression>\n")
+  compileExpression(tokens[3:end_of_let_dec], output_file, tabs+1)
+  output_file.write(tabs * "  " + "</expression>\n")
+  output_file.write(tabs * "  " + handleSymbol(tokens[end_of_let_dec]))
+
+  
 
 # def compileWhile(tokens, output_file):
 
@@ -302,11 +320,20 @@ def compileLet(tokens, output_file, tabs):
 
 # def compileIf(tokens, output_file):
 
-# def compileExpression(tokens, output_file):
-
-# def compileTerm(tokens, output_file):
-
 # def compileExpressionList(tokens, output_file):
+
+def compileTerm(tokens, output_file, tabs):
+    for token in tokens:
+        output_file.write((tabs) * "  " + tokenTypeMaker(token))
+
+def compileExpression(tokens, output_file, tabs):
+  output_file.write(tabs * "  " + "<term>\n")
+  compileTerm(tokens, output_file, tabs+1)
+  output_file.write(tabs * "  " + "</term>\n")
+
+def compileExpressionList(tokens, output_file, tabs):
+    for token in tokens:
+        output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 filename = sys.argv[1]
 
