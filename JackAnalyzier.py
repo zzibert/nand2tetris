@@ -180,7 +180,7 @@ def compilation_engine(output_file, tokenizer):
     if tokenizer[0] == "class":
         output_file.write("<class>\n")
         compileClass(tokenizer, output_file, 1)
-        output_file.write("</class>")
+        output_file.write("</class>\n")
 
 # def parseStatement():
 
@@ -200,7 +200,7 @@ def parseStatementSequence(tokens, output_file, tabs):
         end_of_subroutine_dec = tokens.index(';')
         output_file.write(tabs * "  " + "<subroutineDec>\n")
         compileSubroutineDec(tokens, output_file, tabs+1)
-        output_file.write(tabs * "  " + "</subroutineDec>\n")
+        # parseStatementSequence(tokens[end_of_subroutine_dec+1:], output_file, tabs)
 
 
 
@@ -230,7 +230,6 @@ def compileSubroutineDec(tokens, output_file, tabs):
     output_file.write(tabs * "  " + handleSymbol(tokens[end_of_subroutine_dec])) # )
     output_file.write(tabs * "  " + "<subroutineBody>\n")
     compileSubroutineBody(tokens[1+end_of_subroutine_dec:], output_file, tabs+1)
-    output_file.write(tabs * "  " + "</subroutineBody>\n")
 
 
 
@@ -249,17 +248,27 @@ def compileSubroutineBody(tokens, output_file, tabs):
     output_file.write(tabs * "  " + "</varDec>\n")
     compileSubroutineBody(tokens[end_of_var_dec+1:], output_file, tabs)
 
+  elif tokens[0] == "}":
+    output_file.write(tabs * "  " + handleSymbol(tokens[0])) # }
+    output_file.write((tabs-1) * "  " + "</subroutineBody>\n")
+    output_file.write((tabs-2) * "  " + "</subroutineDec>\n")
+    parseStatementSequence(tokens[1:], output_file, tabs-2)
+
   else:
     end_of_statements_dec = tokens.index('}')
     output_file.write(tabs * "  " + "<statements>\n")
-    compileStatements(tokens[:end_of_statements_dec+1], output_file, tabs+1)
+    compileStatements(tokens[:end_of_statements_dec], output_file, tabs+1)
     output_file.write(tabs * "  " + "</statements>\n")
+    compileSubroutineBody(tokens[end_of_statements_dec:], output_file, tabs)
 
 def compileVarDec(tokens, output_file, tabs):
   for token in tokens:
     output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 def compileStatements(tokens, output_file, tabs):
+  if len(tokens) < 1:
+    return
+
   if tokens[0] == "let":
     end_of_let_dec = tokens.index(';')
     output_file.write(tabs * "  " + "<letStatement>\n")
@@ -274,12 +283,18 @@ def compileStatements(tokens, output_file, tabs):
     output_file.write(tabs * "  " + "</doStatement>\n")
     compileStatements(tokens[end_of_do_dec+1:], output_file, tabs)
 
-  # elif tokens[0] == "if":
-  #   end_of_if_dec = tokens.index(';')
-  #   output_file.write(tabs * "  " + "<ifStatement>\n")
-  #   compileDo(tokens[:end_of_if_dec+1], output_file, tabs+1)
-  #   output_file.write(tabs * "  " + "</ifStatement>\n")
-  #   compileStatements(tokens[end_of_if_dec+1:], output_file, tabs)
+  elif tokens[0] == "return":
+    end_of_return_dec = tokens.index(';')
+    output_file.write(tabs * "  " + "<returnStatement>\n")
+    compileReturn(tokens[:end_of_return_dec+1], output_file, tabs+1)
+    output_file.write(tabs * "  " + "</returnStatement>\n")
+    compileStatements(tokens[end_of_return_dec+1:], output_file, tabs)
+
+
+  elif tokens[0] == "if":
+    output_file.write(tabs * "  " + "<ifStatement>\n")
+    compileIf(tokens, output_file, tabs+1)
+
 
   # elif tokens[0] == "while":
   #   end_of_if_dec = tokens.index(';')
@@ -312,13 +327,33 @@ def compileLet(tokens, output_file, tabs):
   output_file.write(tabs * "  " + "</expression>\n")
   output_file.write(tabs * "  " + handleSymbol(tokens[end_of_let_dec]))
 
-  
 
-# def compileWhile(tokens, output_file):
+def compileReturn(tokens, output_file, tabs):
+    output_file.write(tabs * "  " + handleKeyword(tokens[0])) # return keyword
+    end_of_return_dec = tokens.index(';')
+    compileExpression(tokens[1:end_of_return_dec], output_file, tabs+1)
+    output_file.write(tabs * "  " + handleSymbol(tokens[-1])) # ; keyword
 
-# def compileReturn(tokens, output_file):
+def compileIf(tokens, output_file, tabs):
+  output_file.write(tabs * "  " + handleKeyword(tokens[0])) # if keyword
+  output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
+  end_of_expression = tokens.index(')')
+  output_file.write(tabs * "  " + "<expression>\n")
+  compileExpression(tokens[2:end_of_expression], output_file, tabs+1)
+  output_file.write(tabs * "  " + "</expression>\n")
+  output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression])) # )
+  output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression+1])) # {
+  tokens = tokens[end_of_expression+2:]
+  end_of_statements_dec = tokens.index('}')
+  output_file.write(tabs * "  " + "<statements>\n")
+  compileStatements(tokens[:end_of_statements_dec], output_file, tabs+1)
+  output_file.write(tabs * "  " + "</statements>\n")
+  # output_file.write(tabs * "  " + "<statements>\n")
+  # compileStatements(tokens[(end_of_expression+2):end_of_statements_dec], output_file, tabs+1)
+  # output_file.write(tabs * "  " + "</statements>\n")
+  # output_file.write(tabs-1 * "  " + "</ifStatement>\n")
+  # compileStatements(tokens[end_of_statements_dec+1:], output_file, tabs-1)
 
-# def compileIf(tokens, output_file):
 
 # def compileExpressionList(tokens, output_file):
 
@@ -327,9 +362,10 @@ def compileTerm(tokens, output_file, tabs):
         output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 def compileExpression(tokens, output_file, tabs):
-  output_file.write(tabs * "  " + "<term>\n")
-  compileTerm(tokens, output_file, tabs+1)
-  output_file.write(tabs * "  " + "</term>\n")
+  if len(tokens) > 0:
+    output_file.write(tabs * "  " + "<term>\n")
+    compileTerm(tokens, output_file, tabs+1)
+    output_file.write(tabs * "  " + "</term>\n")
 
 def compileExpressionList(tokens, output_file, tabs):
     for token in tokens:
