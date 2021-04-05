@@ -6,7 +6,7 @@ middle_of_string = False
 
 ignore_line = False
 
-middle_of_if_statement = False
+middle_of_if_statement = 0
 
 
 # JACK ANALYZER
@@ -305,11 +305,11 @@ def compileStatements(tokens, output_file, tabs):
         compileStatements(tokens[2:], output_file, tabs)
 
     elif tokens[0] == "}":
-        if middle_of_if_statement and tokens[1] != "else":
+        if middle_of_if_statement > 0 and tokens[1] != "else":
             output_file.write((tabs) * "  " + "</statements>\n")
             output_file.write((tabs) * "  " + handleSymbol(tokens[0])) # }
             output_file.write((tabs-1) * "  " + "</ifStatement>\n")
-            middle_of_if_statement = False
+            middle_of_if_statement -= 1
         else:
             output_file.write((tabs-1) * "  " + "</statements>\n")
             output_file.write((tabs-1) * "  " + handleSymbol(tokens[0])) # }
@@ -361,7 +361,7 @@ def compileReturn(tokens, output_file, tabs):
 def compileIf(tokens, output_file, tabs):
   global middle_of_if_statement
 
-  middle_of_if_statement = True
+  middle_of_if_statement += 1
 
   output_file.write(tabs * "  " + handleKeyword(tokens[0])) # if keyword
   output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
