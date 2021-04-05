@@ -267,9 +267,8 @@ def compileStatements(tokens, output_file, tabs):
     global middle_of_if_statement
 
     if len(tokens) < 1:
-        if middle_of_if_statement:
-            output_file.write(tabs * "  " + "</IfStatement>\n")
-            middle_of_if_statement = False
+        output_file.write((tabs-1) * "  " + "</subroutineBody>\n")
+        output_file.write((tabs-2) * "  " + "</subroutineDec>\n")
         return
 
         
@@ -298,7 +297,6 @@ def compileStatements(tokens, output_file, tabs):
     elif tokens[0] == "if":
         output_file.write(tabs * "  " + "<ifStatement>\n")
         compileIf(tokens, output_file, tabs+1)
-        output_file.write(tabs * "  " + "</ifStatement>\n")
 
     elif tokens[0] == "else":
         output_file.write(tabs * "  " + handleKeyword(tokens[0])) # else keyword
@@ -307,8 +305,14 @@ def compileStatements(tokens, output_file, tabs):
         compileStatements(tokens[2:], output_file, tabs)
 
     elif tokens[0] == "}":
-        output_file.write((tabs-1) * "  " + "</statements>\n")
-        output_file.write((tabs-1) * "  " + handleSymbol(tokens[0])) # }
+        if middle_of_if_statement and tokens[1] != "else":
+            output_file.write((tabs) * "  " + "</statements>\n")
+            output_file.write((tabs) * "  " + handleSymbol(tokens[0])) # }
+            output_file.write((tabs-1) * "  " + "</ifStatement>\n")
+            middle_of_if_statement = False
+        else:
+            output_file.write((tabs-1) * "  " + "</statements>\n")
+            output_file.write((tabs-1) * "  " + handleSymbol(tokens[0])) # }
         compileStatements(tokens[1:], output_file, tabs-1)
 
     else:
@@ -356,6 +360,8 @@ def compileReturn(tokens, output_file, tabs):
 
 def compileIf(tokens, output_file, tabs):
   global middle_of_if_statement
+
+  middle_of_if_statement = True
 
   output_file.write(tabs * "  " + handleKeyword(tokens[0])) # if keyword
   output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
