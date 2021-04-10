@@ -6,7 +6,21 @@ middle_of_string = False
 
 ignore_line = False
 
-middle_of_if_statement = 0
+middle_of_statements_stack = []
+
+def lookup_from_stack():
+    length = len(middle_of_statements_stack)
+    if len(middle_of_statements_stack) > 0:
+        return middle_of_statements_stack[length-1]
+    else:
+        "empty"
+
+def pop_from_stack():
+    middle_of_statements_stack.pop()
+
+def push_to_stack(element):
+    middle_of_statements_stack.append(element)
+
 
 
 # JACK ANALYZER
@@ -221,13 +235,16 @@ def compileClassVarDec(tokens, output_file, tabs):
         output_file.write(tabs * "  " + tokenTypeMaker(token))
 
 def compileSubroutineDec(tokens, output_file, tabs):
-    output_file.write(tabs * "  " + handleKeyword(tokens[0])) # static or field keyword
-    output_file.write(tabs * "  " + handleKeyword(tokens[1])) # type
-    output_file.write(tabs * "  " + handleIdentifier(tokens[2])) # subroutine name
-    output_file.write(tabs * "  " + handleSymbol(tokens[3])) # (
+    # output_file.write(tabs * "  " + handleKeyword(tokens[0])) # static or field keyword
+    # output_file.write(tabs * "  " + handleKeyword(tokens[1])) # type
+    # output_file.write(tabs * "  " + handleIdentifier(tokens[2])) # subroutine name
+    # output_file.write(tabs * "  " + handleSymbol(tokens[3])) # (
+    
+    beginning_of_subroutine_dec = tokens.index('(')
+    compileTerm(tokens[:(beginning_of_subroutine_dec+1)], output_file, tabs)
     end_of_subroutine_dec = tokens.index(')')
     output_file.write(tabs * "  " + "<parameterList>\n")
-    compileParameterList(tokens[4:end_of_subroutine_dec], output_file, tabs)
+    compileParameterList(tokens[(beginning_of_subroutine_dec+1):end_of_subroutine_dec], output_file, tabs)
     output_file.write(tabs * "  " + "</parameterList>\n")
     output_file.write(tabs * "  " + handleSymbol(tokens[end_of_subroutine_dec])) # )
     output_file.write(tabs * "  " + "<subroutineBody>\n")
@@ -263,8 +280,6 @@ def compileVarDec(tokens, output_file, tabs):
     output_file.write((tabs+1) * "  " + tokenTypeMaker(token))
 
 def compileStatements(tokens, output_file, tabs):
-
-    global middle_of_if_statement
 
     if len(tokens) < 1:
         output_file.write((tabs-1) * "  " + "</subroutineBody>\n")
@@ -304,12 +319,22 @@ def compileStatements(tokens, output_file, tabs):
         output_file.write(tabs * "  " + "<statements>\n")
         compileStatements(tokens[2:], output_file, tabs)
 
+    elif tokens[0] == "while":
+        output_file.write(tabs * "  " + "<whileStatement>\n")
+        compileWhile(tokens, output_file, tabs+1)
+
     elif tokens[0] == "}":
-        if middle_of_if_statement > 0 and tokens[1] != "else":
+        lookup = lookup_from_stack()
+        if lookup == "if" and tokens[1] != "else":
             output_file.write((tabs) * "  " + "</statements>\n")
             output_file.write((tabs) * "  " + handleSymbol(tokens[0])) # }
             output_file.write((tabs-1) * "  " + "</ifStatement>\n")
-            middle_of_if_statement -= 1
+            pop_from_stack()
+        elif lookup == "while":
+            output_file.write(tabs * "  " + "</statements>\n")
+            output_file.write((tabs) * "  " + handleSymbol(tokens[0])) # }
+            output_file.write((tabs-1) * "  " + "</whileStatement>\n")
+            pop_from_stack()
         else:
             output_file.write((tabs-1) * "  " + "</statements>\n")
             output_file.write((tabs-1) * "  " + handleSymbol(tokens[0])) # }
@@ -334,9 +359,7 @@ def compileDo(tokens, output_file, tabs):
   for token in tokens[:(beginning_of_expression_list+1)]:
     output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
-  output_file.write(tabs * "  " + "<expressionList>\n")
   compileExpressionList(tokens[(beginning_of_expression_list+1):end_of_expression_list], output_file, tabs+1)
-  output_file.write(tabs * "  " + "</expressionList>\n")
 
   for token in tokens[end_of_expression_list:]:
     output_file.write((tabs) * "  " + tokenTypeMaker(token))
@@ -346,33 +369,42 @@ def compileLet(tokens, output_file, tabs):
   output_file.write(tabs * "  " + handleIdentifier(tokens[1])) # varName
   output_file.write(tabs * "  " + handleSymbol(tokens[2])) # =
   end_of_let_dec = tokens.index(';')
-  output_file.write(tabs * "  " + "<expression>\n")
   compileExpression(tokens[3:end_of_let_dec], output_file, tabs+1)
-  output_file.write(tabs * "  " + "</expression>\n")
   output_file.write(tabs * "  " + handleSymbol(tokens[end_of_let_dec]))
 
 
 def compileReturn(tokens, output_file, tabs):
     output_file.write(tabs * "  " + handleKeyword(tokens[0])) # return keyword
     end_of_return_dec = tokens.index(';')
-    compileExpression(tokens[1:end_of_return_dec], output_file, tabs+1)
+    if len(tokens[1:end_of_return_dec]) > 0:
+        compileExpression(tokens[1:end_of_return_dec], output_file, tabs+1)
     output_file.write(tabs * "  " + handleSymbol(tokens[-1])) # ; keyword
 
 def compileIf(tokens, output_file, tabs):
-  global middle_of_if_statement
 
-  middle_of_if_statement += 1
+  push_to_stack("if")
 
   output_file.write(tabs * "  " + handleKeyword(tokens[0])) # if keyword
   output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
   end_of_expression = tokens.index(')')
-  output_file.write(tabs * "  " + "<expression>\n")
   compileExpression(tokens[2:end_of_expression], output_file, tabs+1)
-  output_file.write(tabs * "  " + "</expression>\n")
   output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression])) # )
   output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression+1])) # {
   output_file.write(tabs * "  " + "<statements>\n")
   compileStatements(tokens[(end_of_expression+2):], output_file, tabs+1)
+
+def compileWhile(tokens, output_file, tabs):
+
+    push_to_stack("while")
+    
+    output_file.write(tabs * "  " + handleKeyword(tokens[0])) # while keyword
+    output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
+    end_of_expression = tokens.index(')')
+    compileExpression(tokens[2:end_of_expression], output_file, tabs+1)
+    output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression])) # )
+    output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression+1])) # {
+    output_file.write(tabs * "  " + "<statements>\n")
+    compileStatements(tokens[(end_of_expression+2):], output_file, tabs+1)
 
 
 
@@ -384,13 +416,16 @@ def compileTerm(tokens, output_file, tabs):
 
 def compileExpression(tokens, output_file, tabs):
   if len(tokens) > 0:
+    output_file.write((tabs-1) * "  " + "<expression>\n")
     output_file.write(tabs * "  " + "<term>\n")
     compileTerm(tokens, output_file, tabs+1)
     output_file.write(tabs * "  " + "</term>\n")
+    output_file.write((tabs-1) * "  " + "</expression>\n")
 
 def compileExpressionList(tokens, output_file, tabs):
-    for token in tokens:
-        output_file.write((tabs) * "  " + tokenTypeMaker(token))
+    output_file.write((tabs-1) * "  " + "<expressionList>\n")
+    compileExpression(tokens, output_file, tabs+1)
+    output_file.write((tabs-1) * "  " + "</expressionList>\n")
 
 filename = sys.argv[1]
 
