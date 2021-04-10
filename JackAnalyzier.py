@@ -396,7 +396,7 @@ def compileIf(tokens, output_file, tabs):
 def compileWhile(tokens, output_file, tabs):
 
     push_to_stack("while")
-    
+
     output_file.write(tabs * "  " + handleKeyword(tokens[0])) # while keyword
     output_file.write(tabs * "  " + handleSymbol(tokens[1])) # (
     end_of_expression = tokens.index(')')
@@ -424,7 +424,15 @@ def compileExpression(tokens, output_file, tabs):
 
 def compileExpressionList(tokens, output_file, tabs):
     output_file.write((tabs-1) * "  " + "<expressionList>\n")
-    compileExpression(tokens, output_file, tabs+1)
+    while(True):
+        try:
+            end_of_expression = tokens.index(',')
+            compileExpression(tokens[:end_of_expression], output_file, tabs+1)
+            output_file.write(tabs * "  " + handleSymbol(tokens[end_of_expression]))
+            tokens = tokens[(end_of_expression+1):]
+        except ValueError:
+            compileExpression(tokens, output_file, tabs+1)
+            break
     output_file.write((tabs-1) * "  " + "</expressionList>\n")
 
 filename = sys.argv[1]
