@@ -411,8 +411,21 @@ def compileWhile(tokens, output_file, tabs):
 # def compileExpressionList(tokens, output_file):
 
 def compileTerm(tokens, output_file, tabs):
-    for token in tokens:
-        output_file.write((tabs) * "  " + tokenTypeMaker(token))
+
+    for i in range(len(tokens)):
+        if middle_of_string:
+            output_file.write(tokenTypeMaker(tokens[i]))
+        elif tokens[i] == '(':
+            output_file.write(tabs * "  " + handleSymbol(tokens[i])) # (
+        else:
+            output_file.write(tabs * "  " + tokenTypeMaker(tokens[i]))
+    # for token in tokens:
+    #     if middle_of_string:
+    #         output_file.write(tokenTypeMaker(token))
+    #     elif token == '(':
+    #         output_file.write
+    #     else:
+    #         output_file.write((tabs) * "  " + tokenTypeMaker(token))
 
 def compileExpression(tokens, output_file, tabs):
   if len(tokens) > 0:
